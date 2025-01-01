@@ -1,13 +1,11 @@
 # frozen_string_literal: true
 
-require 'ostruct'
-
 class Pry
   # @api private
   class Config
     extend Attributable
 
-    # @return [IO, #readline] he object from which Pry retrieves its lines of
+    # @return [IO, #readline] the object from which Pry retrieves its lines of
     #   input
     attribute :input
 
@@ -25,10 +23,6 @@ class Pry
 
     # @return [Array] Exception that Pry shouldn't rescue
     attribute :unrescued_exceptions
-
-    # @deprecated
-    # @return [Array] Exception that Pry shouldn't rescue
-    attribute :exception_whitelist
 
     # @return [Integer] The number of lines of context to show before and after
     #   exceptions
@@ -66,6 +60,9 @@ class Pry
 
     # @return [Boolean]
     attribute :pager
+
+    # @return [Boolean]
+    attribute :multiline
 
     # @return [Boolean] whether the global ~/.pryrc should be loaded
     attribute :should_load_rc
@@ -153,7 +150,7 @@ class Pry
 
     def initialize
       merge!(
-        input: MemoizedValue.new { lazy_readline },
+        input: MemoizedValue.new { choose_input },
         output: $stdout.tap { |out| out.sync = true },
         commands: Pry::Commands,
         prompt_name: 'pry',
@@ -167,17 +164,10 @@ class Pry
           ::SystemExit, ::SignalException, Pry::TooSafeException
         ],
 
-        exception_whitelist: MemoizedValue.new do
-          output.puts(
-            '[warning] Pry.config.exception_whitelist is deprecated, ' \
-            'please use Pry.config.unrescued_exceptions instead.'
-          )
-          unrescued_exceptions
-        end,
-
         hooks: Pry::Hooks.default,
         pager: true,
         system: Pry::SystemCommandHandler.method(:default),
+        multiline: true,
         color: Pry::Helpers::BaseHelpers.use_ansi_codes?,
         default_window_size: 5,
         editor: Pry::Editor.default,
@@ -199,7 +189,7 @@ class Pry
         extra_sticky_locals: {},
         command_completions: proc { commands.keys },
         file_completions: proc { Dir['.'] },
-        ls: OpenStruct.new(Pry::Command::Ls::DEFAULT_OPTIONS),
+        ls: Pry::Command::Ls::Config.default,
         completer: Pry::InputCompleter,
         history_save: true,
         history_load: true,
@@ -286,7 +276,17 @@ class Pry
 
     private
 
-    def lazy_readline
+    def choose_input
+      input = load_readline
+
+      if Pry::Env['TERM'] == 'dumb' && (defined?(Reline) && input == Reline)
+        input = Pry::Input::SimpleStdio
+      end
+
+      input
+    end
+
+    def load_readline
       require 'readline'
       ::Readline
     rescue LoadError

@@ -17,6 +17,9 @@ class Pry
     # @return [String] String containing the spaces to be inserted before the next line.
     attr_reader :indent_level
 
+    # @return [String] String containing the spaces for the current line.
+    attr_reader :last_indent_level
+
     # @return [Array<String>] The stack of open tokens.
     attr_reader :stack
 
@@ -57,8 +60,8 @@ class Pry
     #
     # :pre_constant and :preserved_constant are the CodeRay 0.9.8 and 1.0.0
     # classifications of "true", "false", and "nil".
-    IGNORE_TOKENS = [:space, :content, :string, :method, :ident,
-                     :constant, :pre_constant, :predefined_constant].freeze
+    IGNORE_TOKENS = %i[space content string method ident
+                       constant pre_constant predefined_constant].freeze
 
     # Tokens that indicate the end of a statement (i.e. that, if they appear
     # directly before an "if" indicates that that if applies to the same line,
@@ -66,10 +69,10 @@ class Pry
     #
     # :reserved and :keywords are the CodeRay 0.9.8 and 1.0.0 respectively
     # classifications of "super", "next", "return", etc.
-    STATEMENT_END_TOKENS = IGNORE_TOKENS + [:regexp, :integer, :float,
-                                            :keyword, :delimiter, :reserved,
-                                            :instance_variable,
-                                            :class_variable, :global_variable]
+    STATEMENT_END_TOKENS = IGNORE_TOKENS + %i[regexp integer float
+                                              keyword delimiter reserved
+                                              instance_variable
+                                              class_variable global_variable]
 
     # Collection of tokens that should appear dedented even though they
     # don't affect the surrounding code.
@@ -110,6 +113,7 @@ class Pry
     def reset
       @stack = []
       @indent_level = String.new # rubocop:disable Style/EmptyLiteral
+      @last_indent_level = @indent_level
       @heredoc_queue = []
       @close_heredocs = {}
       @string_start = nil
@@ -164,11 +168,11 @@ class Pry
 
         output += line
 
+        @last_indent_level = prefix
         prefix = new_prefix
       end
 
       @indent_level = prefix
-
       output
     end
 
@@ -281,9 +285,7 @@ class Pry
     # @param [String] string The Ruby to lex
     # @return [Array] An Array of pairs of [token_value, token_type]
     def tokenize(string)
-      tokens = SyntaxHighlighter.tokenize(string)
-      tokens = tokens.tokens.each_slice(2) if tokens.respond_to?(:tokens) # Coderay 1.0.0
-      tokens.to_a
+      SyntaxHighlighter.tokenize(string).each_slice(2).to_a
     end
 
     # Update the internal state about what kind of strings are open.

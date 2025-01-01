@@ -1,9 +1,86 @@
-### master
+### [v0.15.2](v0.15.2) (December 24, 2024)
+
+#### Bug Fixes
+
+* Avoid breaking reading input if Prism version is undetectable
+  ([#2340](https://github.com/pry/pry/pull/2340))
+
+### [v0.15.1](v0.15.1) (December 24, 2024)
+
+#### Bug Fixes
+
+* Restore Pry.config.ls compatibility
+  ([#2335](https://github.com/pry/pry/pull/2335))
+* Avoid breaking reading inputs if Prism is not available
+  ([#2338](https://github.com/pry/pry/pull/2338))
+
+### [v0.15.0][v0.15.0] (November 15, 2024)
+
+#### Features
+
+* Added support for Reline
+  ([#2298](https://github.com/pry/pry/pull/2298))
+* Added support for Ruby 3.3
+  ([#2295](https://github.com/pry/pry/pull/2295))
+* Added Pry::Input::SimpleStdio for dumb terminals when Reline is in use
+  ([#2304](https://github.com/pry/pry/pull/2304))
+* Remove OpenStruct usage
+  ([#2307](https://github.com/pry/pry/pull/2307))
+  ([#2309](https://github.com/pry/pry/pull/2309))
+* Disable coloring of output when NO_COLOR is set.
+  ([#2323])(https://github.com/pry/pry/pull/2323))
+* Add `pry --no-multiline` flag to keep single line prompt.
+  ([#2327](https://github.com/pry/pry/pull/2327))
+
+#### Bug Fixes
+
+* Fix typos on docs and and comments
+  ([#2300](https://github.com/pry/pry/pull/2300))
+  ([#2301](https://github.com/pry/pry/pull/2301))
+* Fix 'calling clear method' on user code when defined in pry context.
+  ([#2291](https://github.com/pry/pry/pull/2291))
+* Fix arguments WatchExpression#add_expression
+  ([#2278](https://github.com/pry/pry/pull/2278))
+
+### Breaking changes
+
+* Remove support for deprecated `Pry.config.prompt = [proc {}, proc {}]`
+  Use Pry::Prompt API instead
+  ([#2308](https://github.com/pry/pry/pull/2308))
+* Remove deprecated `Pry.config.exception_whitelist`.
+  Use `Pry.config.unrescued_exceptions` instead.
+  ([#2326](https://github.com/pry/pry/pull/2326))
+
+### [v0.14.2][v0.14.2] (January 9, 2023)
+
+#### Features
+
+* Configure `code` as a supported editor on Pry::Editor
+  ([#2236](https://github.com/pry/pry/pull/2236))
+* Added support for Ruby 3.2
+  ([#2263](https://github.com/pry/pry/pull/2263))
+* Added support for Ruby 3.1
+  ([#2228](https://github.com/pry/pry/pull/2228))
 
 #### Bug fixes
 
+* Short circuit eval regexes in finding module definition
+  ([#2253](https://github.com/pry/pry/pull/2253))
+* Revert "Escape non-printing characters"
+  ([#2235](https://github.com/pry/pry/pull/2235))
+* Fixed bug where WeirdMethodLocator would fail to find the source of a method breaking whereami
+  ([#2244](https://github.com/pry/pry/pull/2244))
+* Fixed bug where pry would throw an FrozenError when dealing with incomplete tokens
+  ([#2136](https://github.com/pry/pry/pull/2136))
+* Restore --no-history CLI flag functionality
+  ([#2196](https://github.com/pry/pry/pull/2196))
 * Fixed bug where reading from the `_out_` sticky local variable could return
   wrong results ([#2201](https://github.com/pry/pry/pull/2201))
+
+#### Breaking Changes
+
+* Remove support for Ruby 1.9 and JRuby < 9.0
+  ([#2239](https://github.com/pry/pry/pull/2239))
 
 ### [v0.14.1][v0.14.1] (April 12, 2021)
 
@@ -951,7 +1028,7 @@ complete CHANGELOG:
 * _pry_ now passed as 3rd parameter to :before_session hook
 * ls colors now configurable via Pry.config.ls.local_var_color = :bright_red etc
 * ls separator configurable via, e.g Pry.config.ls.separator = "  "
-* Pry.view_clip() now only calls inspect on a few immediates, otherwise uses the #<> syntax, which has been truncated further to exclude teh mem address, again related to #245
+* Pry.view_clip() now only calls inspect on a few immediates, otherwise uses the #<> syntax, which has been truncated further to exclude the mem address, again related to #245
 
 ### 0.9.3 (2011/7/27)
 * cat --ex (cats 5 lines above and below line in file where exception was raised)

@@ -3,12 +3,32 @@ name: pry
 on: [push, pull_request]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.3
+
+      - name: Install dependencies
+        run: bundle install
+
+      - name: Rubocop lint
+        run: rubocop --parallel
+
+      - name: YARD lint
+        run: |
+          touch README # Workaround for "incorrect" links in README.md
+          bundle exec yardoc --fail-on-warning --no-progress --readme=README
+
   test:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ['ubuntu-20.04', windows-latest]
         ruby:
-          - 2.0
+          - '2.0'
           - 2.1
           - 2.2
           - 2.3
@@ -20,7 +40,9 @@ jobs:
           # we have to use quotes for '3.0'
           - '3.0'
           - 3.1
-          # - head is currently broken due to yard support for 3.2.0-dev
+          - 3.2
+          - 3.3
+          - head
           - jruby-9.3.3.0
           # - jruby-head
         exclude:
@@ -36,37 +58,35 @@ jobs:
             ruby: '2.3' # Intermittent failing Expression: RBASIC_CLASS(ret) == rb_cString
           - os: windows-latest
             ruby: '3.1'
+          - os: windows-latest
+            ruby: '3.2'
+          - os: windows-latest
+            ruby: '3.3'
+          - os: windows-latest
+            ruby: 'head'
 
     runs-on: ${{ matrix.os }}
     continue-on-error: true
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: ${{ matrix.ruby }}
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
 
-    # Run manually, don't cache deps due to a bug with Ruby 2.4 and Ruby 2.5
-    # https://github.com/pry/pry/actions/runs/1016360216
-    - name: Install dependencies
-      run: bundle install
+      # Run manually, don't cache deps due to a bug with Ruby 2.4 and Ruby 2.5
+      # https://github.com/pry/pry/actions/runs/1016360216
+      - name: Install dependencies
+        run: bundle install
 
-    # Rubocop is not included on the Gemfile for earlier rubies. This can be dropped as soon as the support is dropped.
-    - name: Rubocop lint
-      if: matrix.ruby != '2.0' && matrix.ruby != '2.1' && matrix.ruby != '2.2'
-      run: rubocop --parallel
+      - name: Display Ruby version
+        run: ruby -v
 
-    - name: YARD lint
-      run: |
-        touch README # Workaround for "incorrect" links in README.md
-        bundle exec yardoc --fail-on-warning --no-progress --readme=README
-
-    - name: Display Ruby version
-      run: ruby -v
-
-    - name: Test
-      run: bundle exec rake
-      env:
-        # Make sure TERM is set so Pry can indent correctly inside tests.
-        TERM: screen-256color
+      - name: Test
+        run: bundle exec rake
+        env:
+          # Make sure TERM is set so Pry can indent correctly inside tests.
+          TERM: screen-256color
+          ROWS: 40
+          COLUMNS: 160

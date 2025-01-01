@@ -93,14 +93,26 @@ describe "ls" do
     end
 
     it "should show public methods with -p" do
-      expect(pry_eval("ls -p Class.new{ def goo; end }.new")).to match(/methods: goo/)
+      message = "ls -p Class.new{ def goo; end }.new"
+      if Gem::Version.new(RUBY_VERSION) < Gem::Version.new('3.2')
+        expect(pry_eval(message)).to match(/methods: goo/)
+      else
+        expect(pry_eval(message)).to match(/#<Class:.*>#methods: goo/m)
+      end
     end
 
     it "should show protected/private methods with -p" do
-      expect(pry_eval("ls -pM Class.new{ def goo; end; protected :goo }"))
-        .to match(/methods: goo/)
-      expect(pry_eval("ls -p Class.new{ def goo; end; private :goo }.new"))
-        .to match(/methods: goo/)
+      if Gem::Version.new(RUBY_VERSION) < Gem::Version.new('3.2')
+        expect(pry_eval("ls -pM Class.new{ def goo; end; protected :goo }"))
+          .to match(/methods: goo/)
+        expect(pry_eval("ls -p Class.new{ def goo; end; private :goo }.new"))
+          .to match(/methods: goo/)
+      else
+        expect(pry_eval("ls -pM Class.new{ def goo; end; protected :goo }"))
+          .to match(/#<Class:.*>#methods: goo/)
+        expect(pry_eval("ls -p Class.new{ def goo; end; private :goo }.new"))
+          .to match(/#<Class:.*>#methods: goo/)
+      end
     end
 
     it "should work for objects with an overridden method method" do
@@ -232,6 +244,30 @@ describe "ls" do
           "ls -c"
         )
       ).to match(/Method/)
+    end
+  end
+
+  describe "colors" do
+    around do |example|
+      old_config = Pry.config.ls
+      Pry.config.ls = Pry::Command::Ls::Config.default
+      example.run
+      Pry.config.ls = old_config
+    end
+
+    it "should configure colors via config.ls" do
+      pry_eval("Pry.config.ls.heading_color = :bright_green")
+      expect(Pry.config.ls.heading_color).to eql(:bright_green)
+    end
+
+    it "should be accessible via Hash access " do
+      pry_eval("Pry.config.ls[:heading_color] = :bright_red")
+      expect(Pry.config.ls.heading_color).to eql(:bright_red)
+    end
+
+    it "should be able to iterate over all configured colors" do
+      expect(Pry.config.ls.keys.member?(:protected_method_color)).to be_truthy
+      expect(Pry.config.ls.each_pair.to_a).to_not be_empty
     end
   end
 

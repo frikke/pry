@@ -39,6 +39,35 @@ describe Pry do
     end
   end
 
+  describe 'NO_COLOR' do
+    let(:output) { StringIO.new }
+
+    before do
+      Pry.config.color = true
+      allow(Pry::Env).to receive(:[])
+      allow(Pry::Env).to receive(:[]).with('TERM').and_return('xterm-256color')
+
+      Pry.config.output = output
+      Pry.config.input = InputTester.new('"some string"')
+    end
+
+    after do
+      Pry.reset_defaults
+    end
+
+    it 'should respect NO_COLOR ENV precedence' do
+      allow(Pry::Env).to receive(:[]).with('NO_COLOR').and_return('1')
+
+      Pry.start
+      expect(output.string).to eql("=> \"some string\"\n")
+    end
+
+    it 'should colorize NO_COLOR is not present' do
+      Pry.start
+      expect(output.string).to include("\e[31m\e[1;31m")
+    end
+  end
+
   describe 'FAIL_PRY' do
     before do
       allow(Pry::Env).to receive(:[])
@@ -127,8 +156,9 @@ describe Pry do
       end
 
       it 'should be able to operate inside the BasicObject class' do
-        pry_eval(BasicObject, ":foo", "Pad.obj = _")
-        expect(Pad.obj).to eq :foo
+        ObjectStore = Struct.new(:obj).new
+        pry_eval(BasicObject, ":foo", "ObjectStore.obj = _")
+        expect(ObjectStore.obj).to eq :foo
       end
 
       it 'should set an ivar on an object' do
@@ -194,10 +224,6 @@ describe Pry do
             skip "jruby allows mutex usage in signal handlers"
           end
 
-          if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("2.0.0")
-            skip "pre-2.0 mri allows mutex usage in signal handlers"
-          end
-
           trap("USR1") { @str_output = mock_pry }
         end
 
@@ -210,6 +236,9 @@ describe Pry do
         it "should return with error message" do
           expect(mock_pry('1 + 1')).to eql("=> 2\n")
           Process.kill("USR1", Process.pid)
+
+          sleep 0.01 if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("2.1.0")
+
           expect(@str_output).to match(/Unable to obtain mutex lock/)
         end
       end
@@ -324,10 +353,11 @@ describe Pry do
         end
 
         it 'store exceptions' do
-          mock_pry("foo!", "Pad.in = _in_[-1]; Pad.out = _out_[-1]")
+          InOut = Struct.new(:in, :out).new
+          mock_pry("foo!", "InOut.in = _in_[-1]; InOut.out = _out_[-1]")
 
-          expect(Pad.in).to eq "foo!\n"
-          expect(Pad.out).to be_a_kind_of NoMethodError
+          expect(InOut.in).to eq "foo!\n"
+          expect(InOut.out).to be_a_kind_of NoMethodError
         end
       end
 

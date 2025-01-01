@@ -34,6 +34,7 @@ require 'pry/env'
 
 Pry::Commands = Pry::CommandSet.new unless defined?(Pry::Commands)
 
+require 'pry/commands/ls/config'
 require 'pry/commands/ls/jruby_hacks'
 require 'pry/commands/ls/methods_helper'
 require 'pry/commands/ls/interrogatable'
@@ -56,6 +57,8 @@ require 'pry/config/value'
 require 'pry/config/memoized_value'
 require 'pry/config/lazy_value'
 require 'pry/config'
+
+require 'pry/input/simple_stdio'
 
 require 'pry/pry_class'
 require 'pry/pry_instance'

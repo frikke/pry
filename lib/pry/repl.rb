@@ -100,7 +100,7 @@ class Pry
       # Return nil for EOF, :no_more_input for error, or :control_c for <Ctrl-C>
       return val unless val.is_a?(String)
 
-      if pry.config.auto_indent
+      if pry.config.auto_indent && !input_multiline?
         original_val = "#{indentation}#{val}"
         indented_val = @indent.indent(val)
 
@@ -141,8 +141,7 @@ class Pry
         retry
 
       # Handle <Ctrl+C> like Bash: empty the current input buffer, but don't
-      # quit.  This is only for MRI 1.9; other versions of Ruby don't let you
-      # send Interrupt from within Readline.
+      # quit.
       rescue Interrupt
         return :control_c
 
@@ -180,7 +179,31 @@ class Pry
           end
         end
 
-        if readline_available?
+        if reline_available?
+          Reline.output_modifier_proc = lambda do |text, _|
+            if pry.color
+              SyntaxHighlighter.highlight(text)
+            else
+              text
+            end
+          end
+
+          if pry.config.auto_indent
+            Reline.auto_indent_proc = lambda do |lines, line_index, _byte_ptr, _newline|
+              if line_index == 0
+                0
+              else
+                pry_indentation = Pry::Indent.new
+                pry_indentation.indent(lines.join("\n"))
+                pry_indentation.last_indent_level.length
+              end
+            end
+          end
+        end
+
+        if input_multiline?
+          input_readmultiline(current_prompt, false)
+        elsif readline_available?
           set_readline_output
           input_readline(current_prompt, false) # false since we'll add it manually
         elsif coolline_available?
@@ -193,10 +216,27 @@ class Pry
       end
     end
 
+    def input_readmultiline(*args)
+      Pry::InputLock.for(:all).interruptible_region do
+        input.readmultiline(*args) do |multiline_input|
+          Pry.commands.find_command(multiline_input) ||
+            (complete_expression?(multiline_input) && !Reline::IOGate.in_pasting?)
+        end
+      end
+    end
+
     def input_readline(*args)
       Pry::InputLock.for(:all).interruptible_region do
         input.readline(*args)
       end
+    end
+
+    def input_multiline?
+      !!pry.config.multiline && reline_available?
+    end
+
+    def reline_available?
+      defined?(Reline) && input == Reline
     end
 
     def readline_available?
@@ -205,6 +245,20 @@ class Pry
 
     def coolline_available?
       defined?(Coolline) && input.is_a?(Coolline)
+    end
+
+    def prism_available?
+      @prism_available ||= begin
+        # rubocop:disable Lint/SuppressedException
+        begin
+          require 'prism'
+        rescue LoadError
+        end
+        # rubocop:enable Lint/SuppressedException
+
+        defined?(Prism::VERSION) &&
+          Gem::Version.new(Prism::VERSION) >= Gem::Version.new('0.25.0')
+      end
     end
 
     # If `$stdout` is not a tty, it's probably a pipe.
@@ -226,6 +280,21 @@ class Pry
       return if @readline_output
 
       @readline_output = (Readline.output = Pry.config.output) if piping?
+    end
+
+    UNEXPECTED_TOKENS = %i[unexpected_token_ignore lambda_open].freeze
+
+    def complete_expression?(multiline_input)
+      if prism_available?
+        lex = Prism.lex(multiline_input)
+
+        errors = lex.errors
+        return true if errors.empty?
+
+        errors.any? { |error| UNEXPECTED_TOKENS.include?(error.type) }
+      else
+        Pry::Code.complete_expression?(multiline_input)
+      end
     end
 
     # Calculates correct overhang for current line. Supports vi Readline

@@ -28,7 +28,7 @@ RSpec.describe Pry::CommandSet do
       expect(subject.count).to eq(1)
     end
 
-    it "assings default description" do
+    it "assigns default description" do
       command = subject.block_command('test')
       expect(command.description).to eq('No description.')
     end
@@ -59,7 +59,7 @@ RSpec.describe Pry::CommandSet do
       expect(subject.count).to eq(1)
     end
 
-    it "assings default description" do
+    it "assigns default description" do
       command = subject.create_command('test') {}
       expect(command.description).to eq('No description.')
     end
@@ -225,7 +225,7 @@ RSpec.describe Pry::CommandSet do
   describe "#rename_command" do
     before { subject.command('test') }
 
-    it "renames a comamnd" do
+    it "renames a command" do
       subject.rename_command('new-name', 'test')
       expect(subject['test']).to be_nil
       expect(subject['new-name']).not_to be_nil
@@ -396,25 +396,6 @@ RSpec.describe Pry::CommandSet do
 
       it "returns a void result" do
         expect(subject.process_line('test')).to be_void_command
-      end
-    end
-  end
-
-  # TODO: rewrite this block.
-  if defined?(Bond)
-    describe "#complete" do
-      it "should list all command names" do
-        set.create_command('susan') {}
-        expect(set.complete('sus')).to.include 'susan '
-      end
-
-      it "should delegate to commands" do
-        set.create_command('susan') do
-          def complete(_search)
-            ['--foo']
-          end
-        end
-        expect(set.complete('susan ')).to eq ['--foo']
       end
     end
   end

@@ -234,7 +234,7 @@ class Pry
       end.compact
     end
 
-    # build_path seperates the input into two parts: path and input.
+    # build_path separates the input into two parts: path and input.
     # input is the partial string that should be completed
     # path is a proc that takes an input and builds a full path.
     def build_path(input)
@@ -270,7 +270,7 @@ class Pry
       end
 
       # FIXME: Add Pry here as well?
-      [:IRB, :SLex, :RubyLex, :RubyToken].each do |module_name|
+      %i[IRB SLex RubyLex RubyToken].each do |module_name|
         next unless Object.const_defined?(module_name)
 
         scanner.call(Object.const_get(module_name))

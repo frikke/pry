@@ -15,6 +15,7 @@ RSpec.describe Pry::Config do
   specify { expect(subject.pager).to be(true).or be(false) }
   specify { expect(subject.system).to be_a(Method) }
   specify { expect(subject.color).to be(true).or be(false) }
+  specify { expect(subject.multiline).to be(true).or be(false) }
   specify { expect(subject.default_window_size).to be_a(Numeric) }
   specify { expect(subject.editor).to be_a(String) }
   specify { expect(subject.should_load_rc).to be(true).or be(false) }
@@ -34,7 +35,7 @@ RSpec.describe Pry::Config do
   specify { expect(subject.extra_sticky_locals).to be_a(Hash) }
   specify { expect(subject.command_completions).to be_a(Proc) }
   specify { expect(subject.file_completions).to be_a(Proc) }
-  specify { expect(subject.ls).to be_an(OpenStruct) }
+  specify { expect(subject.ls).to be_an(Pry::Command::Ls::Config) }
   specify { expect(subject.completer).to eq(Pry::InputCompleter) }
   specify { expect(subject.history).to be_a(Pry::History) }
   specify { expect(subject.history_save).to eq(true).or be(false) }
@@ -169,6 +170,28 @@ RSpec.describe Pry::Config do
 
       expect(subject).not_to respond_to(:new_option)
       expect(subject).not_to respond_to(:other_option)
+    end
+  end
+
+  if defined?(Reline)
+    describe "#input" do
+      context "when TERM=dumb" do
+        around do |example|
+          old_term = ENV['TERM']
+          ENV['TERM'] = 'dumb'
+
+          example.run
+          ENV['TERM'] = old_term
+        end
+
+        it "configures input with SimpleStdio" do
+          expect(subject.input).to eql(Pry::Input::SimpleStdio)
+        end
+      end
+
+      it "configures input with SimpleStdio" do
+        expect(subject.input).to eql(Readline)
+      end
     end
   end
 
